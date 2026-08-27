@@ -1,6 +1,6 @@
 {
   "name": "preference",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Preferans — classic Russian trick-taking card game for three players",
   "scripts": {
@@ -10,5 +10,9 @@
     "lint": "echo 'lint placeholder'",
     "typecheck": "echo 'typecheck placeholder'"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ll1r1k-1337/preference.git"
+  }
 }
