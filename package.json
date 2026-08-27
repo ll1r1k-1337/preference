@@ -1,6 +1,6 @@
 {
   "name": "preference",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Preferans — classic Russian trick-taking card game for three players",
   "scripts": {
