@@ -94,13 +94,17 @@ export function renderStatus(session: Session): HTMLElement {
   const panel = el('section', { class: 'panel' });
   const dealer = session.party.names[session.party.dealer] ?? `Игрок ${session.party.dealer}`;
   const dealNum = session.party.deals.length + 1;
+
+  const badgeClass = session.closed ? 'status-badge closed' : 'status-badge active';
+  const badgeText = session.closed ? 'Пуля закрыта' : `Раздача №${dealNum}`;
+
   panel.append(
     el('h2', {}, 'Партия'),
-    el('p', { class: 'hint' }, `Раздача №${dealNum}. Сдаёт: ${dealer}.`),
-    el('p', { class: 'hint' }, `Пуля до ${session.party.poolTarget}. Записано раздач: ${session.party.deals.length}.`),
+    el('span', { class: badgeClass }, badgeText),
+    el('p', { class: 'hint' }, `Сдаёт: ${dealer}. Пуля до ${session.party.poolTarget}. Записано: ${session.party.deals.length}.`),
   );
   if (session.closed) {
-    panel.append(el('p', { class: 'hint' }, 'Пуля закрыта — см. итоговый пересчёт.'));
+    panel.append(el('p', { class: 'hint' }, 'См. итоговый пересчёт ниже.'));
   }
   return panel;
 }

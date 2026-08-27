@@ -76,7 +76,9 @@ function renderList(): void {
     el('h2', {}, 'Журнал партий'));
 
   if (store.parties.length === 0) {
-    section.append(el('p', { class: 'hint' }, 'Партий пока нет. Создайте первую!'));
+    section.append(el('div', { class: 'empty-state' },
+      el('div', { class: 'empty-icon' }, '♠'),
+      el('p', {}, 'Партий пока нет. Создайте первую!')));
   } else {
     const list = el('ul', { class: 'party-list' });
     for (let i = store.parties.length - 1; i >= 0; i--) {
@@ -108,7 +110,7 @@ function renderList(): void {
     section.append(list);
   }
 
-  const addBtn = el('button', { type: 'button', class: 'primary' }, '+ Новая пуля');
+  const addBtn = el('button', { type: 'button', class: 'primary' }, '♠ Новая пуля');
   addBtn.addEventListener('click', showNewPartyDialog);
   section.append(el('div', { class: 'actions' }, addBtn));
 
