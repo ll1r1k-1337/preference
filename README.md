@@ -1,5 +1,7 @@
 # Preference
 
+![CI](https://github.com/ll1r1k-1337/preference/actions/workflows/ci.yml/badge.svg)
+
 Preferans (Преферанс) — classic Russian trick-taking card game for three players.
 
 ## Project Description
