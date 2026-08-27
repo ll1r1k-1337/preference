@@ -3,31 +3,47 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Преферанс — сочинка на троих</title>
+    <title>Преферанс — журнал пульки</title>
     <link rel="stylesheet" href="/src/ui/styles.css" />
   </head>
   <body>
     <header>
-      <h1>Преферанс · сочинка</h1>
+      <button type="button" id="back-btn" hidden>← К списку</button>
+      <h1>Преферанс · пулька</h1>
       <span class="spacer"></span>
-      <label for="pool-target">Пуля до</label>
-      <select id="pool-target">
-        <option value="4">4 — быстрая</option>
-        <option value="6">6</option>
-        <option value="10" selected>10 — классика</option>
-        <option value="20">20 — длинная</option>
-      </select>
-      <label for="bot-level">Соперники</label>
-      <select id="bot-level">
-        <option value="easy">Лёгкие</option>
-        <option value="normal" selected>Обычные</option>
-        <option value="hard">Сильные</option>
-      </select>
       <button type="button" id="rules-btn">Правила</button>
-      <button type="button" id="new-party" class="primary">Новая пуля</button>
     </header>
 
     <div id="app"></div>
+
+    <dialog id="new-party-dlg">
+      <h2>Новая пуля</h2>
+      <div class="form-row">
+        <label for="name-0">Игрок 1</label>
+        <input id="name-0" type="text" placeholder="Игрок 1" />
+      </div>
+      <div class="form-row">
+        <label for="name-1">Игрок 2</label>
+        <input id="name-1" type="text" placeholder="Игрок 2" />
+      </div>
+      <div class="form-row">
+        <label for="name-2">Игрок 3</label>
+        <input id="name-2" type="text" placeholder="Игрок 3" />
+      </div>
+      <div class="form-row">
+        <label for="new-pool-target">Пуля до</label>
+        <select id="new-pool-target">
+          <option value="4">4 — быстрая</option>
+          <option value="6">6</option>
+          <option value="10" selected>10 — классика</option>
+          <option value="20">20 — длинная</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button type="button" id="dlg-cancel">Отмена</button>
+        <button type="button" id="dlg-start" class="primary">Начать</button>
+      </div>
+    </dialog>
 
     <dialog id="rules">
       <h2>Правила (docs/rules.md)</h2>

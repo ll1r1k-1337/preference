@@ -1,101 +1,195 @@
 /**
- * Точка входа UI: один изменяемый указатель на сессию + перерисовка.
+ * Точка входа: журнал партии в преферанс (пулька).
  *
- * Игровых правил здесь нет. Всё, что делает приложение, — отправляет команды
- * движку через `session`, крутит ходы ботов по таймеру и рисует состояние.
+ * Два экрана:
+ *   1. Список партий — создать / открыть / удалить.
+ *   2. Журнал партии — лист записи и ввод раздач.
  */
-import type { CardId } from './core/index.js';
-import type { Command } from './engine/index.js';
+import type { DealOutcome } from './scoring/index.js';
+import { type PartyState, clearParty } from './game/party.js';
 import {
-  applyCommand,
-  botStep,
-  finishDeal,
-  HUMAN,
+  addDeal,
+  fromParty,
   newSession,
-  persist,
-  restoreSession,
-  waitingForHuman,
   type Session,
 } from './game/session.js';
-import { clearParty } from './game/party.js';
-import { parseBotLevel, type BotLevel } from './game/bot.js';
-import { renderActions } from './ui/actions.js';
-import { el, renderHand, renderLog, renderSheet, renderTable } from './ui/render.js';
+import { renderDealEntry } from './ui/actions.js';
+import { el, renderSheet, renderStatus } from './ui/render.js';
 
-/** Пауза между ходами ботов, мс — чтобы за игрой можно было следить. */
-const BOT_DELAY = 550;
+// ─── мульти-партийное хранилище ───────────────────────────────
+// Массив партий хранится в localStorage как JSON-массив raw PartyState.
+// Каждая партия имеет свой индекс. «preference.party.v1» — legacy-формат
+// одиночной партии, который мигрируется при первом запуске.
 
-/** Выбранная в шапке величина пули (§9.8). */
-function selectedPoolTarget(): number {
-  const select = document.getElementById('pool-target') as HTMLSelectElement | null;
-  const value = Number.parseInt(select?.value ?? '10', 10);
-  return Number.isFinite(value) && value > 0 ? value : 10;
+const STORAGE_KEY = 'preference.parties.v2';
+
+interface StoredParties {
+  parties: PartyState[];
 }
 
-/** Выбранный в шапке уровень соперников. Правил не меняет — только силу игры. */
-function selectedBotLevel(): BotLevel {
-  const select = document.getElementById('bot-level') as HTMLSelectElement | null;
-  return parseBotLevel(select?.value);
+function loadAll(): StoredParties {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw !== null) {
+    try {
+      const parsed = JSON.parse(raw) as StoredParties;
+      if (Array.isArray(parsed.parties)) return parsed;
+    } catch { /* corrupt, fall through */ }
+  }
+  // миграция из v1 (одиночная партия)
+  const v1 = localStorage.getItem('preference.party.v1');
+  if (v1 !== null) {
+    try {
+      const party = JSON.parse(v1) as PartyState;
+      if (Array.isArray(party.names) && party.board !== undefined) {
+        const store: StoredParties = { parties: [party] };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+        localStorage.removeItem('preference.party.v1');
+        return store;
+      }
+    } catch { /* corrupt */ }
+  }
+  return { parties: [] };
 }
 
-let session: Session =
-  restoreSession(localStorage) ??
-  newSession({ poolTarget: selectedPoolTarget(), botLevel: selectedBotLevel() });
-let selected: CardId[] = [];
-let timer: number | undefined;
+function saveAll(store: StoredParties): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+}
+
+// ─── состояние приложения ────────────────────────────────────
+
+let store = loadAll();
+let activeIndex: number | null = null; // null = экран списка
+let session: Session | null = null;
 
 const root = document.getElementById('app');
 if (root === null) throw new Error('нет контейнера #app');
 
-function send(command: Command): void {
-  session = applyCommand(session, command);
-  selected = [];
-  render();
-  scheduleBots();
-}
+const backBtn = document.getElementById('back-btn') as HTMLButtonElement;
 
-/** Клик по карте: в фазе сноса — выбор, в розыгрыше — ход. */
-function onCard(id: CardId): void {
-  const deal = session.deal;
-  if (deal === null) return;
-  if (deal.phase === 'DISCARD') {
-    selected = selected.includes(id) ? selected.filter((c) => c !== id) : [...selected, id].slice(-2);
-    render();
-    return;
+// ─── экран списка партий ─────────────────────────────────────
+
+function renderList(): void {
+  backBtn.hidden = true;
+  root!.replaceChildren();
+
+  const section = el('section', { class: 'panel' },
+    el('h2', {}, 'Журнал партий'));
+
+  if (store.parties.length === 0) {
+    section.append(el('p', { class: 'hint' }, 'Партий пока нет. Создайте первую!'));
+  } else {
+    const list = el('ul', { class: 'party-list' });
+    for (let i = store.parties.length - 1; i >= 0; i--) {
+      const p = store.parties[i]!;
+      const names = p.names.join(', ');
+      const deals = p.deals.length;
+      const poolTarget = p.poolTarget;
+      const li = el('li', { class: 'party-item' });
+
+      const openBtn = el('button', { type: 'button', class: 'party-open' },
+        el('span', { class: 'party-names' }, names),
+        el('span', { class: 'party-meta' }, `${deals} раздач · пуля до ${poolTarget}`));
+      const idx = i;
+      openBtn.addEventListener('click', () => openParty(idx));
+
+      const delBtn = el('button', { type: 'button', class: 'danger-icon', title: 'Удалить' }, '✕');
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.confirm(`Удалить партию «${names}»?`)) {
+          store.parties.splice(idx, 1);
+          saveAll(store);
+          renderList();
+        }
+      });
+
+      li.append(openBtn, delBtn);
+      list.append(li);
+    }
+    section.append(list);
   }
-  if (deal.phase === 'PLAY') send({ type: 'PLAY_CARD', player: HUMAN, card: id });
+
+  const addBtn = el('button', { type: 'button', class: 'primary' }, '+ Новая пуля');
+  addBtn.addEventListener('click', showNewPartyDialog);
+  section.append(el('div', { class: 'actions' }, addBtn));
+
+  root!.append(el('main', { class: 'list-layout' }, section));
 }
 
-function nextDeal(): void {
-  session = finishDeal(session);
-  persist(session, localStorage);
-  selected = [];
-  render();
-  scheduleBots();
+// ─── диалог новой партии ─────────────────────────────────────
+
+function showNewPartyDialog(): void {
+  const dlg = document.getElementById('new-party-dlg') as HTMLDialogElement;
+  // сбросить поля
+  for (const id of ['name-0', 'name-1', 'name-2']) {
+    (document.getElementById(id) as HTMLInputElement).value = '';
+  }
+  (document.getElementById('new-pool-target') as HTMLSelectElement).value = '10';
+  dlg.showModal();
 }
 
-/** Крутить ходы ботов, пока очередь не вернётся к человеку. */
-function scheduleBots(): void {
-  window.clearTimeout(timer);
-  const deal = session.deal;
-  if (deal === null || deal.phase === 'RESULT' || waitingForHuman(session)) return;
-  timer = window.setTimeout(() => {
-    const next = botStep(session);
-    if (next === session) return; // ходить некому — не зацикливаемся
-    session = next;
-    render();
-    scheduleBots();
-  }, BOT_DELAY);
+function createFromDialog(): void {
+  const names = ['name-0', 'name-1', 'name-2'].map((id) => {
+    const inp = document.getElementById(id) as HTMLInputElement;
+    return inp.value.trim() || inp.placeholder;
+  });
+  const poolTarget = Number((document.getElementById('new-pool-target') as HTMLSelectElement).value) || 10;
+
+  session = newSession({ names, poolTarget });
+  store.parties.push(session.party);
+  activeIndex = store.parties.length - 1;
+  saveAll(store);
+
+  (document.getElementById('new-party-dlg') as HTMLDialogElement).close();
+  renderJournal();
 }
 
-function newParty(): void {
-  clearParty(localStorage);
-  session = newSession({ poolTarget: selectedPoolTarget(), botLevel: selectedBotLevel() });
-  selected = [];
-  render();
-  scheduleBots();
+// ─── экран журнала партии ────────────────────────────────────
+
+function openParty(index: number): void {
+  activeIndex = index;
+  session = fromParty(store.parties[index]!);
+  renderJournal();
 }
 
+function onDeal(outcome: DealOutcome): void {
+  if (session === null || activeIndex === null) return;
+  session = addDeal(session, outcome);
+  store.parties[activeIndex] = session.party;
+  saveAll(store);
+  renderJournal();
+}
+
+function renderJournal(): void {
+  if (session === null) return;
+  backBtn.hidden = false;
+
+  root!.replaceChildren(
+    el('main', {},
+      el('div', { class: 'stack' },
+        renderStatus(session),
+        renderDealEntry(session, { onSubmit: onDeal })),
+      el('div', { class: 'stack' }, renderSheet(session.sheet))),
+  );
+}
+
+// ─── навигация ───────────────────────────────────────────────
+
+function goBack(): void {
+  activeIndex = null;
+  session = null;
+  clearParty(localStorage); // убрать legacy-ключ если есть
+  store = loadAll(); // перечитать (на случай параллельных вкладок)
+  renderList();
+}
+
+backBtn.addEventListener('click', goBack);
+
+document.getElementById('dlg-start')?.addEventListener('click', createFromDialog);
+document.getElementById('dlg-cancel')?.addEventListener('click', () => {
+  (document.getElementById('new-party-dlg') as HTMLDialogElement).close();
+});
+
+// правила
 function showRules(): void {
   const dialog = document.getElementById('rules') as HTMLDialogElement | null;
   if (dialog === null) return;
@@ -105,31 +199,15 @@ function showRules(): void {
     void fetch('docs/rules.md')
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
       .then((text) => { body.textContent = text; })
-      .catch(() => { body.textContent = 'Не удалось загрузить docs/rules.md. Файл лежит в корне проекта.'; });
+      .catch(() => { body.textContent = 'Не удалось загрузить docs/rules.md.'; });
   }
   dialog.showModal();
 }
-
-function render(): void {
-  root!.replaceChildren(
-    el('main', {},
-      el('div', { class: 'stack' },
-        renderTable(session),
-        renderHand(session, selected, onCard),
-        renderActions(session, selected, { send, clearSelection: () => { selected = []; render(); }, nextDeal })),
-      el('div', { class: 'stack' }, renderSheet(session.sheet), renderLog(session))),
-  );
-}
-
-document.getElementById('new-party')?.addEventListener('click', () => {
-  if (session.party.deals.length === 0 || window.confirm('Начать новую пулю? Текущая запись будет потеряна.')) {
-    newParty();
-  }
-});
 document.getElementById('rules-btn')?.addEventListener('click', showRules);
 document.getElementById('rules-close')?.addEventListener('click', () => {
   (document.getElementById('rules') as HTMLDialogElement | null)?.close();
 });
 
-render();
-scheduleBots();
+// ─── запуск ──────────────────────────────────────────────────
+
+renderList();

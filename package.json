@@ -2,27 +2,21 @@
   "name": "@preference/app",
   "version": "1.3.0",
   "private": true,
-  "description": "Преферанс (конвенция «Сочи», 3 игрока): ядро правил, движок раздачи, расчёт очков, бот-соперник и UI",
+  "description": "Журнал для Преферанса (пулька, конвенция «Сочи», 3 игрока): расчёт очков, лист записи",
   "type": "module",
-  "main": "./src/core/index.ts",
+  "main": "./src/scoring/index.ts",
   "exports": {
-    ".": "./src/core/index.ts",
-    "./engine": "./src/engine/index.ts",
     "./scoring": "./src/scoring/index.ts",
-    "./bot": "./src/bot/index.ts",
     "./game": "./src/game/party.ts"
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run --exclude '**/acceptance.test.ts'",
-    "test:all": "vitest run",
-    "test:acceptance": "vitest run src/bot/__tests__/acceptance.test.ts",
+    "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "gate": "npm run typecheck && npm test",
-    "golden": "tsx scripts/make-golden.ts"
+    "gate": "npm run typecheck && npm test"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
