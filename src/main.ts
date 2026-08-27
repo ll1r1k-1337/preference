@@ -14,7 +14,7 @@ import {
   type Session,
 } from './game/session.js';
 import { renderDealEntry } from './ui/actions.js';
-import { el, renderSheet, renderStatus } from './ui/render.js';
+import { el, renderSheet, renderStatus, type StatusHandlers } from './ui/render.js';
 
 // ─── мульти-партийное хранилище ───────────────────────────────
 // Массив партий хранится в localStorage как JSON-массив raw PartyState.
@@ -60,6 +60,7 @@ function saveAll(store: StoredParties): void {
 let store = loadAll();
 let activeIndex: number | null = null; // null = экран списка
 let session: Session | null = null;
+let overrideOrder: number[] | null = null; // ручной порядок ходов
 
 const root = document.getElementById('app');
 if (root === null) throw new Error('нет контейнера #app');
@@ -156,8 +157,13 @@ function onDeal(outcome: DealOutcome): void {
   session = addDeal(session, outcome);
   store.parties[activeIndex] = session.party;
   saveAll(store);
+  overrideOrder = null; // сброс ручного порядка при новом раунде
   renderJournal();
 }
+
+const statusHandlers: StatusHandlers = {
+  onOverrideOrder: (order) => { overrideOrder = order; renderJournal(); },
+};
 
 function renderJournal(): void {
   if (session === null) return;
@@ -166,7 +172,7 @@ function renderJournal(): void {
   root!.replaceChildren(
     el('main', {},
       el('div', { class: 'stack' },
-        renderStatus(session),
+        renderStatus(session, statusHandlers, overrideOrder),
         renderDealEntry(session, { onSubmit: onDeal })),
       el('div', { class: 'stack' }, renderSheet(session.sheet))),
   );
@@ -177,6 +183,7 @@ function renderJournal(): void {
 function goBack(): void {
   activeIndex = null;
   session = null;
+  overrideOrder = null;
   clearParty(localStorage); // убрать legacy-ключ если есть
   store = loadAll(); // перечитать (на случай параллельных вкладок)
   renderList();
