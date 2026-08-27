@@ -1,0 +1,14 @@
+{
+  "name": "preference",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Preferans — classic Russian trick-taking card game for three players",
+  "scripts": {
+    "dev": "echo 'dev server placeholder'",
+    "build": "echo 'build placeholder'",
+    "test": "echo 'test placeholder'",
+    "lint": "echo 'lint placeholder'",
+    "typecheck": "echo 'typecheck placeholder'"
+  },
+  "license": "MIT"
+}
