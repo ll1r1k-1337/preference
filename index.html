@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Преферанс — сочинка на троих</title>
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Преферанс · сочинка</h1>
+      <span class="spacer"></span>
+      <label for="pool-target">Пуля до</label>
+      <select id="pool-target">
+        <option value="4">4 — быстрая</option>
+        <option value="6">6</option>
+        <option value="10" selected>10 — классика</option>
+        <option value="20">20 — длинная</option>
+      </select>
+      <label for="bot-level">Соперники</label>
+      <select id="bot-level">
+        <option value="easy">Лёгкие</option>
+        <option value="normal" selected>Обычные</option>
+        <option value="hard">Сильные</option>
+      </select>
+      <button type="button" id="rules-btn">Правила</button>
+      <button type="button" id="new-party" class="primary">Новая пуля</button>
+    </header>
+
+    <div id="app"></div>
+
+    <dialog id="rules">
+      <h2>Правила (docs/rules.md)</h2>
+      <div class="rules-body"></div>
+      <p><button type="button" id="rules-close" class="primary">Закрыть</button></p>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

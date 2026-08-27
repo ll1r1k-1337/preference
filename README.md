@@ -1,91 +1,73 @@
-# Preference
+# Преферанс (конвенция «Сочи», 3 игрока)
 
-![CI](https://github.com/ll1r1k-1337/preference/actions/workflows/ci.yml/badge.svg)
+Полная реализация игры: правила, движок раздачи, расчёт очков, бот-соперник
+и веб-интерфейс. Источник истины по правилам — [`docs/rules.md`](docs/rules.md)
+(версия `rules-v1`, 45 нормативных сценариев TS-01…TS-45).
 
-Preferans (Преферанс) — classic Russian trick-taking card game for three players.
-
-## Project Description
-
-A web-based implementation of the Preferans card game featuring:
-- Full game engine with bidding, widow pickup, discard, whist declaration, and trick play
-- Scoring system with pulya, gora, whists, penalties, raspasy, and mizer
-- AI bot opponent with Monte-Carlo strategy
-- Interactive UI built with Vue 3 and TypeScript
-
-## Getting Started
+## Запуск
 
 ```bash
 npm install
-npm run dev
+npm run dev      # http://localhost:5173 — играть
+npm run build    # продакшен-сборка в dist/
+npm run gate     # tsc --noEmit + быстрые тесты
 ```
 
-## Development
+## Архитектура
 
-- `npm run dev` — start development server
-- `npm run build` — production build
-- `npm run test` — run tests
-- `npm run lint` — run linter
-- `npm run typecheck` — type checking
+Слои разделены по правилу «правила живут в одном месте». Каждый слой знает
+только то, что ниже, и ничего не дублирует.
 
-## Release Process
+```
+docs/rules.md          нормативная спецификация (SSOT)
+   │
+   ├── src/core        карты, колода, сдача, контракты, розыгрыш, правила хода
+   ├── src/scoring     пуля, гора, висты, распасы, мизер, итог §9.9
+   ├── src/engine      конечный автомат раздачи: торговля → прикуп → вист → игра
+   ├── src/bot         соперник: оценка руки, торговля, снос, вист, Monte-Carlo
+   ├── src/game        партия: ротация сдающего, лист записи, сессия, адаптер бота
+   └── src/ui          отрисовка и действия; игровой логики НЕТ
+```
 
-This project uses [release-please](https://github.com/googleapis/release-please) for automated releases with semantic versioning.
+Ключевые инварианты, которые держат систему честной:
 
-### How It Works
+- **Легальность считает только движок.** UI и бот выбирают строго из готовых
+  `legalBids` / `legalContracts` / `legalMoves`, поэтому нелегальный ход
+  невозможен структурно, а не «по договорённости».
+- **Все числа листа записи — из `scoring`.** UI ничего не пересчитывает сам.
+- **Бот — чистая функция** `(DealState) -> Command`; единственное состояние — ГПСЧ.
+- **`PlayerId`**: движок использует `0|1|2`, модуль расчёта — строки.
+  Склейка сделана в одной функции `toScoringOutcome` (`src/game/party.ts`).
 
-1. Developers write commits using the [Conventional Commits](https://www.conventionalcommits.org/) format.
-2. When commits are pushed/merged to `main`, the release-please GitHub Action runs automatically.
-3. Release-please analyzes commits since the last release and opens a "Release PR" that:
-   - Bumps the version in `package.json`
-   - Updates `CHANGELOG.md` with all changes
-4. When the Release PR is merged, release-please creates a GitHub Release with the new version tag.
-5. Releases can also be triggered manually via the workflow_dispatch trigger in GitHub Actions.
+## Уровни соперников
 
-### Commit Message Format
+| Уровень  | Как играет                                            |
+|----------|-------------------------------------------------------|
+| `easy`   | случайный легальный ход                               |
+| `normal` | эвристики оценки руки и розыгрыша (по умолчанию)      |
+| `hard`   | те же эвристики + Monte-Carlo поиск (60 сэмплов/ход)  |
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages:
+Уровень выбирается в шапке интерфейса и сохраняется вместе с партией.
 
-| Prefix | Version Bump | Example |
-|--------|-------------|---------|
-| `fix:` | Patch (0.0.x) | `fix: correct trick scoring logic` |
-| `feat:` | Minor (0.x.0) | `feat: add mizer game mode` |
-| `feat!:` or `BREAKING CHANGE:` | Major (x.0.0) | `feat!: redesign scoring API` |
-| `chore:` | No release | `chore: update dependencies` |
-| `docs:` | No release | `docs: update README` |
-| `ci:` | No release | `ci: add lint step` |
-| `refactor:` | No release | `refactor: simplify deal phase` |
-| `test:` | No release | `test: add bidding edge cases` |
-
-### Examples
+## Тесты
 
 ```bash
-# Bug fix → patch release
-git commit -m "fix: handle edge case in widow pickup"
-
-# New feature → minor release
-git commit -m "feat: add game replay functionality"
-
-# Breaking change → major release
-git commit -m "feat!: change scoring API return type"
-
-# With scope
-git commit -m "fix(engine): correct trump suit validation"
-
-# Multi-line with body
-git commit -m "feat: add save/load game state
-
-Implements localStorage persistence for game state.
-Players can resume interrupted games."
+npm test              # быстрый прогон (без долгой приёмки бота)
+npm run test:all      # всё, включая приёмку бота (~4 мин)
+npm run test:acceptance   # только приёмка бота: фуззинг, матчи уровней
+python scripts/check_spec_coverage.py   # покрытие TS-01…TS-45
 ```
 
-### Manual Release
+Мутационные проверки — тесты обязаны падать при поломке нормативного правила:
 
-You can trigger a release manually from the GitHub Actions tab:
-1. Go to Actions → Release workflow
-2. Click "Run workflow"
-3. Select the `main` branch
-4. Click "Run workflow"
+```bash
+python scripts/mutation_check.py          # правила хода (§6), ядро
+python scripts/mutation_check_engine.py   # фазы раздачи, движок
+python scripts/mutation_check_bot.py      # эвристики и поиск бота
+```
 
-## License
-
-[MIT](LICENSE)
+Приёмка продакшен-сборки (`src/ui/__tests__/dist-e2e.test.ts`) поднимает
+собранный `dist/assets/*.js` в DOM и играет полную пулю кликами — так
+проверяется артефакт, который реально уезжает в браузер, а не только исходники.
+Тест пропускает себя, если `dist/` не собран, поэтому перед ним нужен
+`npm run build`.

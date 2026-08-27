@@ -1,0 +1,76 @@
+{
+  "обычная игра": {
+    "kind": "contract",
+    "contract": "6S",
+    "declarer": 1,
+    "tricks": {
+      "0": 0,
+      "1": 7,
+      "2": 3
+    },
+    "whisted": {
+      "0": true,
+      "2": true
+    },
+    "mode": "dark"
+  },
+  "распасы": {
+    "kind": "raspasy",
+    "tricks": {
+      "0": 4,
+      "1": 3,
+      "2": 3
+    },
+    "consecutiveIndex": 0
+  },
+  "мизер": {
+    "kind": "miser",
+    "declarer": 1,
+    "declarerTricks": 4
+  },
+  "вист втёмную": {
+    "kind": "contract",
+    "contract": "7H",
+    "declarer": 1,
+    "tricks": {
+      "0": 2,
+      "1": 3,
+      "2": 5
+    },
+    "whisted": {
+      "0": true,
+      "2": true
+    },
+    "mode": "dark"
+  },
+  "недобор": {
+    "kind": "contract",
+    "contract": "10NT",
+    "declarer": 2,
+    "tricks": {
+      "0": 4,
+      "1": 3,
+      "2": 3
+    },
+    "whisted": {
+      "0": true,
+      "1": true
+    },
+    "mode": "dark"
+  },
+  "на своих": {
+    "kind": "contract",
+    "contract": "7S",
+    "declarer": 0,
+    "tricks": {
+      "0": 10,
+      "1": 0,
+      "2": 0
+    },
+    "whisted": {
+      "1": false,
+      "2": false
+    },
+    "mode": "dark"
+  }
+}

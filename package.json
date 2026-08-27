@@ -1,18 +1,35 @@
 {
-  "name": "preference",
-  "version": "1.0.0",
+  "name": "@preference/app",
+  "version": "1.3.0",
   "private": true,
-  "description": "Preferans — classic Russian trick-taking card game for three players",
-  "scripts": {
-    "dev": "echo 'dev server placeholder'",
-    "build": "echo 'build placeholder'",
-    "test": "echo 'test placeholder'",
-    "lint": "echo 'lint placeholder'",
-    "typecheck": "echo 'typecheck placeholder'"
+  "description": "Преферанс (конвенция «Сочи», 3 игрока): ядро правил, движок раздачи, расчёт очков, бот-соперник и UI",
+  "type": "module",
+  "main": "./src/core/index.ts",
+  "exports": {
+    ".": "./src/core/index.ts",
+    "./engine": "./src/engine/index.ts",
+    "./scoring": "./src/scoring/index.ts",
+    "./bot": "./src/bot/index.ts",
+    "./game": "./src/game/party.ts"
   },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ll1r1k-1337/preference.git"
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run --exclude '**/acceptance.test.ts'",
+    "test:all": "vitest run",
+    "test:acceptance": "vitest run src/bot/__tests__/acceptance.test.ts",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "gate": "npm run typecheck && npm test",
+    "golden": "tsx scripts/make-golden.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "happy-dom": "^20.11.6",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.2",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4"
   }
 }
