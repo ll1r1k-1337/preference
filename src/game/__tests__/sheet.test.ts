@@ -13,6 +13,7 @@ import {
 import {
   buildSheet,
   createParty,
+  getPlayOrder,
   loadParty,
   PLAYER_IDS,
   recordDeal,
@@ -191,5 +192,26 @@ describe('слой партии', () => {
     expect(nextDealer(0)).toBe(1);
     expect(nextDealer(1)).toBe(2);
     expect(nextDealer(2)).toBe(0);
+  });
+});
+
+describe('ротация порядка ходов', () => {
+  it('3 игрока: ротация по раундам', () => {
+    expect(getPlayOrder(0, 3)).toEqual([0, 1, 2]);
+    expect(getPlayOrder(1, 3)).toEqual([1, 2, 0]);
+    expect(getPlayOrder(2, 3)).toEqual([2, 0, 1]);
+    expect(getPlayOrder(3, 3)).toEqual([0, 1, 2]); // цикл
+  });
+
+  it('4 игрока: ротация по раундам', () => {
+    expect(getPlayOrder(0, 4)).toEqual([0, 1, 2, 3]);
+    expect(getPlayOrder(1, 4)).toEqual([1, 2, 3, 0]);
+    expect(getPlayOrder(4, 4)).toEqual([0, 1, 2, 3]); // цикл
+  });
+
+  it('2 игрока: ротация', () => {
+    expect(getPlayOrder(0, 2)).toEqual([0, 1]);
+    expect(getPlayOrder(1, 2)).toEqual([1, 0]);
+    expect(getPlayOrder(2, 2)).toEqual([0, 1]);
   });
 });

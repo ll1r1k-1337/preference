@@ -415,6 +415,15 @@ dialog select option { color: #1a1a1a; }
   background: currentColor;
 }
 
+/* ---------------------------------------------------------- ход/игрок */
+.play-order {
+  font-size: 14px;
+}
+.current-player {
+  font-weight: 700;
+  color: var(--gold);
+}
+
 /* ------------------------------------------------------------ скролл */
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
