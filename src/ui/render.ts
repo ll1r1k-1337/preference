@@ -3,7 +3,7 @@
  *
  * Что показать в пульке — `buildSheet`. Игровой логики нет.
  */
-import { type Sheet } from '../game/party.js';
+import { type Sheet, getPlayOrder } from '../game/party.js';
 import type { Session } from '../game/session.js';
 
 /** Короткий тег: `el('div', { class: 'x' }, 'текст', child)`. */
@@ -89,20 +89,75 @@ export function renderSheet(sheet: Sheet): HTMLElement {
   return panel;
 }
 
-/** Информация о текущей раздаче (кто сдаёт). */
-export function renderStatus(session: Session): HTMLElement {
+export interface StatusHandlers {
+  readonly onOverrideOrder?: (order: number[] | null) => void;
+}
+
+/** Информация о текущей раздаче (кто сдаёт) + порядок ходов с ротацией. */
+export function renderStatus(
+  session: Session,
+  handlers: StatusHandlers = {},
+  overrideOrder: number[] | null = null,
+): HTMLElement {
   const panel = el('section', { class: 'panel' });
-  const dealer = session.party.names[session.party.dealer] ?? `Игрок ${session.party.dealer}`;
+  const names = session.party.names;
+  const dealer = names[session.party.dealer] ?? `Игрок ${session.party.dealer}`;
   const dealNum = session.party.deals.length + 1;
+  const roundIndex = session.party.deals.length; // 0-based
 
   const badgeClass = session.closed ? 'status-badge closed' : 'status-badge active';
   const badgeText = session.closed ? 'Пуля закрыта' : `Раздача №${dealNum}`;
+
+  // Порядок ходов: ручной или автоматический
+  const autoOrder = getPlayOrder(roundIndex, names.length);
+  const currentOrder = overrideOrder ?? autoOrder;
+
+  // Кто ходит первым — выделяем жирным
+  const first = currentOrder[0] ?? 0;
+  const firstPlayer = names[first] ?? `Игрок ${first}`;
+  const restPlayers = currentOrder.slice(1).map((i) => names[i] ?? `Игрок ${i}`).join(' → ');
+  const orderLine = el('p', { class: 'hint play-order' },
+    `Ход: `,
+  );
+  orderLine.append(
+    el('span', { class: 'current-player' }, firstPlayer),
+    document.createTextNode(restPlayers ? ` → ${restPlayers}` : ''),
+    overrideOrder ? document.createTextNode(' (ручной)') : document.createTextNode(''),
+  );
 
   panel.append(
     el('h2', {}, 'Партия'),
     el('span', { class: badgeClass }, badgeText),
     el('p', { class: 'hint' }, `Сдаёт: ${dealer}. Пуля до ${session.party.poolTarget}. Записано: ${session.party.deals.length}.`),
+    orderLine,
   );
+
+  if (!session.closed && handlers.onOverrideOrder) {
+    const overrideBtn = el('button', { type: 'button', class: overrideOrder ? 'danger-icon' : '' },
+      overrideOrder ? 'Сбросить порядок' : 'Изменить порядок');
+    overrideBtn.addEventListener('click', () => {
+      if (overrideOrder) {
+        handlers.onOverrideOrder!(null);
+      } else {
+        const input = prompt(
+          `Введите порядок мест через запятую (сейчас: ${currentOrder.map((i) => i + 1).join(', ')}):`,
+          currentOrder.map((i) => i + 1).join(', '),
+        );
+        if (input === null) return;
+        const parsed = input.split(',').map((s) => Number(s.trim()) - 1);
+        const valid = parsed.length === names.length
+          && parsed.every((n) => n >= 0 && n < names.length)
+          && new Set(parsed).size === names.length;
+        if (!valid) {
+          alert(`Нужно ${names.length} уникальных номеров от 1 до ${names.length}`);
+          return;
+        }
+        handlers.onOverrideOrder!(parsed);
+      }
+    });
+    panel.append(el('div', { class: 'actions' }, overrideBtn));
+  }
+
   if (session.closed) {
     panel.append(el('p', { class: 'hint' }, 'См. итоговый пересчёт ниже.'));
   }

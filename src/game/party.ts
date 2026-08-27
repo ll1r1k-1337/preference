@@ -29,6 +29,15 @@ export const seatId = (seat: Seat): PlayerId => String(seat);
 /** Ротация сдающего: 0 → 1 → 2 → 0. */
 export const nextDealer = (dealer: Seat): Seat => ((dealer + 1) % 3) as Seat;
 
+/**
+ * Порядок ходов для раунда: в раунде N (0-based) первым ходит
+ * игрок N % count, затем остальные по кругу.
+ */
+export function getPlayOrder(roundIndex: number, playerCount: number): number[] {
+  const first = roundIndex % playerCount;
+  return Array.from({ length: playerCount }, (_, i) => (first + i) % playerCount);
+}
+
 /** Запись об одной сыгранной раздаче. */
 export interface DealRecord {
   readonly dealer: Seat;
